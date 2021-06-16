@@ -33,7 +33,5 @@ cli.add_command(write)
 cli.add_command(ls)
 
 
-
-
 if __name__ == '__main__':
     cli()
