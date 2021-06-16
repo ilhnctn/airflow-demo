@@ -37,7 +37,7 @@ dags:
     depth: 1
     # the number of consecutive failures allowed before aborting
     maxFailures: 0
-    subPath: ""
+    subPath: "dags"
     # Sync the dag every 10 seconds (good for dev env)
     wait: 10
 
