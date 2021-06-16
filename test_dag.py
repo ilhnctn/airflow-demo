@@ -8,6 +8,25 @@ from os.path import join
 import airflow.contrib.operators.kubernetes_pod_operator
 import pendulum
 
+default_args = {
+    "owner": "someone",
+    "depends_on_past": False,
+    "email": ["test@somesite.de"],
+    "email_on_failure": True,
+    "email_on_retry": False,
+    "retries": 3,
+    "retry_delay": timedelta(minutes=5),
+}
+
+APP_ENV_VARS = {"key": "var", "env": "demo", (1, 2): [3, 4]}
+
+app_environment = airflow.models.Variable.get("app_environment", default_var="dev")
+log_environment = {"prod": "Production"}.get(app_environment, "Development")
+default_log_level = {"prod": "INFO"}.get(app_environment, "INFO")
+log_level = airflow.models.Variable.get("log_level", default_var=default_log_level)
+
+default_args["start_date"] = pendulum.datetime(2021, 6, 16, 11, tz="UTC")
+
 
 LOGGING = {
     "version": 1,
@@ -26,38 +45,17 @@ LOGGING = {
     },
 }
 
-app_environment = airflow.models.Variable.get("app_environment", default_var="dev")
 
-APP_ENV_VARS = dict()
-
-log_environment = {"prod": "Production"}.get(app_environment, "Development")
-default_log_level = {"prod": "INFO"}.get(app_environment, "INFO")
-log_level = airflow.models.Variable.get("log_level", default_var=default_log_level)
-default_args["start_date"] = pendulum.datetime(2021, 6, 16, 11, tzinfo="UTC")
-
-
-production_deployment_kwargs = {
-    "sftp": {
-        "csv": {
-            "date_format": "%d.%m.%Y %H:%M",
-            "float_format": "%.4f",
-            "filename": "Some_demo_file_{now_local:%Y%m%d_%H%M}.csv",
-            "rename": {"datetime": "Some Message", "power": "Prognose PV [kW]"},
-            "decimal": ",",
-        },
-    },
-}
-
-
-
-def build_command_string(app, **kwargs):
-    return ["exec", "--app", app, "--kwargs", json.dumps(kwargs)]
+def build_command_string(filename, content):
+    return ["write", filename, "--content", content]
 
 def build_environment():
-    environment = app_ENV_VARS
+    environment = APP_ENV_VARS
     environment["LOGGING_CONF"] = json.dumps(LOGGING)
     return environment
 
+
+environment = build_environment()
 
 with airflow.DAG(
     dag_id="test_dag",
@@ -70,7 +68,8 @@ with airflow.DAG(
         airflow.contrib.operators.kubernetes_pod_operator.KubernetesPodOperator(
             task_id="test_dag_first",
             arguments=build_command_string(
-                "test_dag_first", kubernetes=True, **production_deployment_kwargs
+                "test_first_task",
+                "Dummy data"
             ),
             retries=3,
             retry_delay=timedelta(seconds=10),
@@ -78,45 +77,43 @@ with airflow.DAG(
             execution_timeout=timedelta(minutes=5),
             # KubernetesPodOperator specific args
             name="test_dag_first",
-            namespace="default",
+            namespace="aif",
             startup_timeout_seconds=180,
-            image="python:3.9",
+            image="ilhnctn/python-cli:v1",
             is_delete_operator_pod=True,
             env_vars=environment,
-            cmds=["app"],
         ),
         airflow.contrib.operators.kubernetes_pod_operator.KubernetesPodOperator(
             task_id="test_dag_first_derived",
             arguments=build_command_string(
-                "test_dag_first", kubernetes=True, **production_deployment_kwargs
+                "test_second_task",
+                "Another Content"
             ),
             name="test_dag_first_derived",
-            namespace="default",
+            namespace="aif",
             retries=3,
             retry_delay=timedelta(seconds=10),
             sla=timedelta(minutes=5),
             execution_timeout=timedelta(minutes=5),
             startup_timeout_seconds=180,
-            image="python:3.9",
+            image="ilhnctn/python-cli:v1",
             is_delete_operator_pod=True,
             env_vars=environment,
-            cmds=["app"],
         ),
     ] >> airflow.contrib.operators.kubernetes_pod_operator.KubernetesPodOperator(
         task_id="create_callculation",
         name="create_callculation",
-        namespace="default",
+        namespace="aif",
         retries=1,
         arguments=build_command_string(
-            "test_dag_first", kubernetes=True, **production_deployment_kwargs
+            "test_dag",
+            "Last content"
         ),
         retry_delay=timedelta(seconds=10),
         sla=timedelta(minutes=9),
         execution_timeout=timedelta(minutes=9),
         startup_timeout_seconds=180,
-        image="python:3.9",
+        image="ilhnctn/python-cli:v1",
         is_delete_operator_pod=True,
-        env_vars=environment,
-        cmds=["app"],
-        trigger_rule="all_done",
+        env_vars=environment
     )

@@ -23,3 +23,20 @@ dags:
     size: 1Gi
   gitSync:
     enabled: true
+
+# Git sync
+dags:
+  persistence:
+    # Enable persistent volume for storing dags
+    enabled: true
+  gitSync:
+    enabled: true
+    repo: https://github.com/ilhnctn/airflow-demo.git
+    branch: develop
+    rev: HEAD
+    depth: 1
+    # the number of consecutive failures allowed before aborting
+    maxFailures: 0
+    subPath: ""
+    wait: 10
+
