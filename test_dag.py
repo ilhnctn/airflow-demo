@@ -82,7 +82,6 @@ with airflow.DAG(
             image="ilhnctn/python-cli:v1",
             is_delete_operator_pod=True,
             env_vars=environment,
-            cmds=["write"],
         ),
         airflow.contrib.operators.kubernetes_pod_operator.KubernetesPodOperator(
             task_id="test_dag_first_derived",
@@ -100,7 +99,6 @@ with airflow.DAG(
             image="ilhnctn/python-cli:v1",
             is_delete_operator_pod=True,
             env_vars=environment,
-            cmds=["write"],
         ),
     ] >> airflow.contrib.operators.kubernetes_pod_operator.KubernetesPodOperator(
         task_id="create_callculation",
@@ -117,7 +115,5 @@ with airflow.DAG(
         startup_timeout_seconds=180,
         image="ilhnctn/python-cli:v1",
         is_delete_operator_pod=True,
-        env_vars=environment,
-        cmds=["write"],
-        trigger_rule="all_done",
+        env_vars=environment
     )
