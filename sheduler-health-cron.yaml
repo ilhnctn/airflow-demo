@@ -1,0 +1,19 @@
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: scheduler-healthcheck
+  namespace: airflow-community
+spec:
+  schedule: "*/2 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: scheduler-healthcheck
+            image: ilhnctn/scheduler-hc:v3
+            imagePullPolicy: IfNotPresent
+            env:
+            - name: AIRFLOW_HEALTH_ENDPOINT
+              value: http://airflow-cr-web.airflow-community:8080/health
+          restartPolicy: Never
